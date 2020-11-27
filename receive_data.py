@@ -7,50 +7,33 @@ from time import sleep
 
 #######Seleciona qual bandpower teve o valor mais alto
 def selectBand(bandPower):
-    return (bandPower.index(max(bandPower)))
+    sortedBand = sorted(bandPower[0])
+    maxElement = sortedBand[-1]
+    bIndex = bandPower[0].index(maxElement)
+    return (bIndex) 
 
 #######cálculo de média
 def median (buffer):
-    total = 0
-    data = buffer.get_data()
-    for i in range(len(data)):
-        for j in range(len(data)):
-            total += data[i][j]
-    total = total / j
+    total = np.average(buffer)
     return (total)
 
-def FindBandPower(buffer, info):
-    # epoch = mne.EpochsArray(buffer, info)
-    # buffer.filter(l_freq = 8, h_freq = 13)
-    # buffer.plot_psd(fmin=0., fmax=60.)
-
+def FindBandPower(buffer):
 
     #######Filtragem das faixas
-    deltaBuffer = buffer.filter(l_freq = 0.5, h_freq = 4., verbose = 'ERROR')
-    # deltaBuffer = deltaBuffer.filter(l_freq = 0.5, h_freq = 4., verbose = 'ERROR')
-    # deltaBuffer = deltaBuffer.filter(l_freq = 0.5, h_freq = 4., verbose = 'ERROR')
-
-    thetaBuffer = buffer.filter(l_freq = 4., h_freq = 8., verbose = 'ERROR')
-    # thetaBuffer = thetaBuffer.filter(l_freq = 4., h_freq = 8., verbose = 'ERROR')
-    # thetaBuffer = thetaBuffer.filter(l_freq = 4., h_freq = 8., verbose = 'ERROR')
-
-    alphaBuffer = buffer.filter(l_freq = 8., h_freq = 13., verbose = 'ERROR')
-    # alphaBuffer = alphaBuffer.filter(l_freq = 8., h_freq = 13., verbose = 'ERROR')
-    # alphaBuffer = alphaBuffer.filter(l_freq = 8., h_freq = 13., verbose = 'ERROR')
-
-    betaBuffer = buffer.filter(l_freq = 13., h_freq = 32., verbose = 'ERROR')
-    #betaBuffer = betaBuffer.filter(l_freq = 13., h_freq = 32., verbose = 'ERROR')
-    # betaBuffer = betaBuffer.filter(l_freq = 13., h_freq = 32., verbose = 'ERROR')
-
-    gammaBuffer = buffer.filter(l_freq = 32., h_freq = 100., verbose = 'ERROR')
-    # gammaBuffer = gammaBuffer.filter(l_freq = 32., h_freq = 100., verbose = 'ERROR')
-    # gammaBuffer = gammaBuffer.filter(l_freq = 32., h_freq = 100., verbose = 'ERROR')
+    data = buffer.filter(l_freq=1, h_freq=50, verbose = 'ERROR')
+    data = data.filter(l_freq=1, h_freq=50, verbose = 'ERROR')
+    data = data.filter(l_freq=1, h_freq=50, verbose = 'ERROR')
     
-    #print (alphaBuffer.get_data())
-    
-    #######tentei transformar no dominio do tempo(?) 
-    # teste = mne.time_frequency.stft(buffer, 4)
-    # print(teste)
+    deltaBuffer, _ = mne.time_frequency.psd_welch(
+        data, n_per_seg=250, fmin=0.5, fmax=4)
+    thetaBuffer, _ = mne.time_frequency.psd_welch(
+        data, n_per_seg=250, fmin=4, fmax=8)
+    alphaBuffer, _ = mne.time_frequency.psd_welch(
+        data, n_per_seg=250, fmin=8, fmax=13)
+    betaBuffer, _ = mne.time_frequency.psd_welch(
+        data, n_per_seg=250, fmin=13, fmax=32)
+    gammaBuffer, _ = mne.time_frequency.psd_welch(
+        data, n_per_seg=250, fmin=32, fmax=100)
 
     #######chamada da função de cálculo de média para cada buffer filtrado
     deltaMedian = median(deltaBuffer)
@@ -63,9 +46,10 @@ def FindBandPower(buffer, info):
     ####### lista com a média de todas as bandpower
     bandPower = []
     bandPower.append([deltaMedian, thethaMedian, alphaMedian, betaMedian, gammaMedian])
-
+    
     returnedIndex = selectBand(bandPower)
-    print (returnedIndex)
+
+    # print (returnedIndex)
     if returnedIndex == 0:
         print ("Delta")
     elif returnedIndex == 1:
@@ -77,15 +61,6 @@ def FindBandPower(buffer, info):
     elif returnedIndex == 4:
         print("Gamma")
 
-        
-    # alphaBuffer.plot_psd(fmin=0., fmax=60.)
-
-def func2():
-    pass
-def func3():
-    pass
-def func4():
-    pass
 
 def main():
     buffer = []
@@ -93,9 +68,13 @@ def main():
     # first resolve an EEG stream on the lab network
     print("looking for an EEG stream...")
     streams = resolve_stream('type', 'EEG')
-    info = mne.create_info(8, 1024, "eeg")
+    sample_rate = 250
+    info = mne.create_info( 8, sfreq=sample_rate, ch_types='eeg')
+    
     # create a new inlet to read from the stream
     inlet = StreamInlet(streams[0])
+    
+    
     i = 0
     while True:
         # get a new sample (you can also omit the timestamp part if you're not
@@ -107,8 +86,8 @@ def main():
             # print("---------------------------antes: " , len(buffer))
             npBuffer = np.array(buffer, dtype=np.float64)
             # print(npBuffer.T.shape)
-            teste = mne.io.RawArray(npBuffer.T, info)
-            FindBandPower(teste, info)
+            raw = mne.io.RawArray(npBuffer.T, info)
+            FindBandPower(raw)
             buffer = buffer[256:1024]
             # print("---------------------------depois: " , len(buffer))
             # print (buffer)
