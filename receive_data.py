@@ -4,6 +4,7 @@ from pylsl import StreamInlet, resolve_stream
 import mne
 import numpy as np
 from time import sleep
+from scipy.signal import stft
 
 #######Seleciona qual bandpower teve o valor mais alto
 def selectBand(bandPower):
@@ -51,19 +52,23 @@ def FindBandPower(buffer):
 
     # print (returnedIndex)
     if returnedIndex == 0:
-        print ("Delta")
+        print ("A emissão mais alta é da banda: Delta")
     elif returnedIndex == 1:
-        print("Theta")
+        print("A emissão mais alta é da banda: Theta")
+        print("O indivíduo está passando por emoções profundas")
     elif returnedIndex == 2:
-        print("Alpha")
+        print("A emissão mais alta é da banda: Alpha")
+        print("O indivíduo está meditando")
     elif returnedIndex == 3:
-        print("Beta")
+        print("A emissão mais alta é da banda: Beta")
+        print("O indivíduo está concentrado")
     elif returnedIndex == 4:
-        print("Gamma")
+        print("A emissão mais alta é da banda: Gamma")
 
 
 def main():
     buffer = []
+    bigBuffer = []
 
     # first resolve an EEG stream on the lab network
     print("looking for an EEG stream...")
@@ -87,7 +92,18 @@ def main():
             npBuffer = np.array(buffer, dtype=np.float64)
             # print(npBuffer.T.shape)
             raw = mne.io.RawArray(npBuffer.T, info)
+            values = raw.get_data()
+            print(values)
             FindBandPower(raw)
+            # values = mne.time_frequency.stftfreq(values, 4)
+            print(np.array(values).shape)
+            # values = values.reshape(1, values.shape[-1])
+            # print(values.shape)
+            evoked = mne.EvokedArray(values, raw.info)
+            print(evoked.ch_names)
+            print(evoked.data)
+            evoked.pick_channels(['0', '1'])
+            evoked.plot(spatial_colors=True, time_unit='s')
             buffer = buffer[256:1024]
             # print("---------------------------depois: " , len(buffer))
             # print (buffer)
